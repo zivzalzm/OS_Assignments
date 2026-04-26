@@ -104,6 +104,11 @@ sys_co_yield(void)
     return -1;
   }
 
+  // error: value must be positive
+  if (value <= 0){
+    return -1;
+  }
+
   // find target process in the proc table
   extern struct proc proc[];
   struct  proc *target = 0;
@@ -133,6 +138,12 @@ sys_co_yield(void)
     target->state = RUNNABLE;
   }
   release(&target->lock);
+
+  /* Note: if target never calls co_yield back to us, this process will sleep indefinitly.
+           We consider this undefined behavior, co_yield is designed for 
+           cooperating processes that both agree to exchange values.
+           It is caller's responsibility to ensure the target will respond.
+  */
 
   //sleep ourselves, waiting for target to co_yield back to us
   acquire(&p->lock);

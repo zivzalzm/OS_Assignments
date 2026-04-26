@@ -18,6 +18,15 @@ void test_errors(void){
     if (pid == 0){
         exit(0);    // child exits immediately
     }
+
+    // (d) yield with invalid value (zero)
+    ret = co_yield(getpid()+1, 0);
+    printf("zero value: %d (expected -1)\n", ret);
+
+    // (e) yield with invalid value (negative)
+    ret = co_yield(getpid()+1, -5);
+    printf("negative value: %d (expected -1)\n", ret);
+
     wait(0); // wait for child to die
     ret = co_yield(pid, 1);
     printf("killed process: %d (expected -1)\n", ret);
