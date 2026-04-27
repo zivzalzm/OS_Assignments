@@ -120,7 +120,7 @@ sys_co_yield(void)
       //   UNUSED / ZOMBIE / killed  — already dead or never alive.
       //   USED                      — still being initialized by allocproc().
       //   SLEEPING on foreign chan  — blocked on pipe/disk/wait; waking it
-      //                              here would corrupt that protocol.
+      //                               here would corrupt that protocol.
       if (t->state == UNUSED ||
           t->state == USED   ||
           t->state == ZOMBIE ||
