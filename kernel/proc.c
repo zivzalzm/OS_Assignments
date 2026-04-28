@@ -509,6 +509,84 @@ yield(void)
   release(&p->lock);
 }
 
+// Direct process-to-process CPU handoff, bypassing the round-robin scheduler.
+// Passes val to the target.
+// returns the value that target offered, or -1 on error.
+int
+co_yield(int pid, int val)
+{
+  struct proc *me = myproc();
+  struct proc *target = 0;
+  int intena;
+
+  if(pid <= 0 || pid == me->pid)
+    return -1;
+
+  // Find the target and hold its lock on exit from the loop.
+  for(struct proc *p = proc; p < &proc[NPROC]; p++){
+    acquire(&p->lock);
+    if(p->pid == pid){
+      target = p;
+      break;
+    }
+    release(&p->lock);
+  }
+
+  if(target == 0)
+  return -1;
+
+  if(target->state == ZOMBIE || target->killed ){
+    release(&target->lock);
+    return -1;
+  }
+
+  // === case 1: target is already waiting in co_yield ===
+  // Channel convention: a process sleeping in vo_yield uses its own address as the sleep channel.
+  // no other sleep in xv6 uses this channel
+  if(target->state == SLEEPING && target->chan == (void*)target){
+    int ret = target->xstate;                  // capture target's offered value.
+                                               // local var survives swtch (sp saved)
+    target->trapframe->a0 = (uint64)val;       // deliver our value to target's return register
+    target->chan = 0;
+    target->state = RUNNING;                   // skip RUNNABLE - direct handoff
+
+    // We hold target->lock through swtch.
+    // Target resumes with its own lock aready held (noff=1),
+    // satisfying the invariant that swtch requires exactly one lock.
+    // Target's release(&me->lock) after its own swtch will free it.
+    me->xstate = val;
+    me->chan == (void*)me;
+    me->state = SLEEPING;
+    mycpu()->proc = target;
+    intena = mycpu()->intena;
+    swtch(&me->context, &target->context);
+
+    // Whoever switches back to us holds me->lock (same handoff convention).
+    mycpu()->intena = intena;
+    me->chan = 0;
+    release(&me->lock);
+    return ret;
+  }
+
+  // === Case 2: target isn't sleeping in co_yield yet (startup only) ===
+  // Can't swutch directly, sleep via the scheduler and wait for target
+  // to call co_yield( me , val ), which becomes a Case 1 call from its side.
+  release(&target->lock);
+
+  acquire(&me->lock);                  // noff=1, scheduler releases this lock on context switch
+  me->xstate = val;
+  me->chan = (void*)me; 
+  me->state = SLEEPING;
+  intena = mycpu()->intena;
+  swtch(&me->context, &mycpu()->context);
+
+  // Target (case 1) held me->lock when switching to me, so it is held here. ###?###
+  mycpu()->intena = intena;
+  me->chan = 0;
+  release(&me->lock);
+  return (int)me->trapframe->a0;       // written by whoever woke me
+}
+
 // A fork child's very first scheduling by scheduler()
 // will swtch to forkret.
 void
