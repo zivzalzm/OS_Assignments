@@ -555,7 +555,7 @@ co_yield(int pid, int val)
     // satisfying the invariant that swtch requires exactly one lock.
     // Target's release(&me->lock) after its own swtch will free it.
     me->xstate = val;
-    me->chan == (void*)me;
+    me->chan = (void*)me;
     me->state = SLEEPING;
     mycpu()->proc = target;
     intena = mycpu()->intena;
