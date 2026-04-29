@@ -89,3 +89,18 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_memsize(void)
+{
+  return myproc()->sz;
+}
+
+uint64
+sys_co_yield(void)
+{
+  int pid, val;
+  argint(0, &pid);
+  argint(1, &val);
+  return (uint64)co_yield(pid, val);
+}
