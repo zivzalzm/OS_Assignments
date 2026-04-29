@@ -464,9 +464,17 @@ scheduler(void)
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
+        struct proc *ran = c->proc;
         c->proc = 0;
+        if(!holding(&p->lock)){
+          if(ran) release(&ran->lock);
+          else pop_off();
+        } else {
+          release(&p->lock);
+        }
+      } else {
+        release(&p->lock);
       }
-      release(&p->lock);
     }
   }
 }
