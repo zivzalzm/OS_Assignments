@@ -464,16 +464,17 @@ scheduler(void)
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
-        struct proc *ran = c->proc;
+        struct proc *ran = c->proc;  // who sent us here?
         c->proc = 0;
         if(!holding(&p->lock)){
-          if(ran) release(&ran->lock);
+          // P2P handoff already released p->lock
+          if(ran) release(&ran->lock);   // release the real lock that's actually held
           else pop_off();
         } else {
-          release(&p->lock);
+          release(&p->lock);            // normal path
         }
       } else {
-        release(&p->lock);
+        release(&p->lock);              // non-RUNNABLE: lock was just acquired, always release
       }
     }
   }
