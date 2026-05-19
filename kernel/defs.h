@@ -110,6 +110,11 @@ void            procdump(void);
 // swtch.S
 void            swtch(struct context*, struct context*);
 
+// rand.c
+void            lcg_randinit(void);
+void            lcg_srand(uint);
+uint            lcg_rand(void);
+
 // spinlock.c
 void            acquire(struct spinlock*);
 int             holding(struct spinlock*);
@@ -117,11 +122,6 @@ void            initlock(struct spinlock*, char*);
 void            release(struct spinlock*);
 void            push_off(void);
 void            pop_off(void);
-
-// rand.c
-void            lcg_randinit(void);
-void            lcg_srand(uint64 seed);
-uint            lcg_rand(void);
 
 // sleeplock.c
 void            acquiresleep(struct sleeplock*);
